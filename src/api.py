@@ -9,38 +9,38 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+from typing import List
+from pydantic import BaseModel
+
+
+class EnrollRequest(BaseModel):
+    user_id: str
+    image_urls: List[str]
+
+
 @router.post("/enroll")
-async def enroll(user_id: str, image_url: str):
-
-    faces = await detect_and_embed(image_url)
-
-    if not faces:
+async def enroll(request: EnrollRequest):
+    result = await detect_and_embed(request.image_urls)
+    if not result:
         raise HTTPException(404, "No valid face detected")
-
-    for face in faces:
-        save_embedding(user_id, face["embedding"])
-
+    save_embedding(request.user_id, result["embedding"])
     return {
         "status": "enrolled",
-        "embeddings_saved": len(faces),
+        "embeddings_saved": result["count"],
     }
 
 
 @router.post("/recognize")
 async def recognize(image_url: str):
-    faces = await detect_and_embed(image_url)
-
-    if not faces:
+    result = await detect_and_embed([image_url])
+    if not result:
         return {"match": False}
-
-    for face in faces:
-        result = search_embedding(face["embedding"])
-        if result.points:
-            best = result.points[0]
-            return {
-                "match": True,
-                "user_id": best.payload["user_id"],
-                "score": best.score,
-            }
-
+    search_result = search_embedding(result["embedding"])
+    if search_result.points:
+        best = search_result.points[0]
+        return {
+            "match": True,
+            "user_id": best.payload["user_id"],
+            "score": best.score,
+        }
     return {"match": False}
