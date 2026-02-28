@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from .face.embedding import detect_and_embed
-from .qdrant.client import save_embedding, search_embedding
+from .qdrant.client import delete_user_embeddings, save_embedding, search_embedding
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -44,3 +44,9 @@ async def recognize(image_url: str):
             "score": best.score,
         }
     return {"match": False}
+
+
+@router.delete("/user/{user_id}")
+async def delete_user(user_id: str):
+    delete_user_embeddings(user_id)
+    return {"status": "deleted", "user_id": user_id}
