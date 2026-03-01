@@ -28,17 +28,21 @@ def create_collection_if_not_exists():
     try:
         existing = qdrant.get_collection(collection_name)
         print(f"Collection '{collection_name}' already exists.")
-        return
     except Exception:
         # collection does not exist
-        pass
+        qdrant.recreate_collection(
+            collection_name="face_embeddings",
+            vectors_config={
+                "face": models.VectorParams(size=512, distance=models.Distance.COSINE)
+            },
+            sparse_vectors_config={"sparse-vector": models.SparseVectorParams()},
+        )
 
-    qdrant.recreate_collection(
-        collection_name="face_embeddings",
-        vectors_config={
-            "face": models.VectorParams(size=512, distance=models.Distance.COSINE)
-        },
-        sparse_vectors_config={"sparse-vector": models.SparseVectorParams()},
+    # Ensure payload index exists for filtering by user_id
+    qdrant.create_payload_index(
+        collection_name=collection_name,
+        field_name="user_id",
+        field_schema=models.PayloadSchemaType.KEYWORD,
     )
 
 
@@ -51,3 +55,19 @@ def search_embedding(embedding: list):
         score_threshold=0.35,  # lower is better for COSINE distance
     )
     return result
+
+
+def delete_user_embeddings(user_id: str):
+    qdrant.delete(
+        collection_name="face_embeddings",
+        points_selector=models.FilterSelector(
+            filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="user_id",
+                        match=models.MatchValue(value=user_id),
+                    )
+                ]
+            )
+        ),
+    )
