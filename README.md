@@ -1,2 +1,2 @@
-# facecheck-server
-The official repository for the facecheck face attendance tracking  system. This is the server repository.
+# edutrack-py-server
+This is the official repository for the facial recognition and detection model of the EduTrack application.
